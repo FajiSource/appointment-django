@@ -8,17 +8,26 @@ import LoansPage from './pages/LoansPage';
 import ReportsPage from './pages/ReportsPage';
 import BackupPage from './pages/BackupPage';
 import RestorePage from './pages/RestorePage';
+import ClientRegisterPage from './pages/Register/ClientRegisterPage';
 const PrivateRoute = ({ element }) => {
     const { user, loading } = useAuth();
-    if (loading) return null; // Or a loading spinner
+    if (loading) return null;
     return user ? element : <Navigate to="/" />;
+}
+const PublicRoute = ({ element }) => {
+    const { user, loading } = useAuth();
+    if (loading) return null;
+    return user ? <Navigate to="/dashboard" /> : element;
 }
 
 function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<LoginPage />} />
+                <Route path="/" element={<PublicRoute element={<LoginPage />} />} />
+                <Route path="/register" element={<PublicRoute element={<ClientRegisterPage />} />} />
+
+                
                 {/* Private routes */}
                 <Route path="/dashboard" element={<PrivateRoute element={<DashboardPage />} />} />
                 <Route path="/user" element={<PrivateRoute element={<UserPage />} />} />
@@ -27,6 +36,7 @@ function App() {
                 <Route path="/reportgen" element={<PrivateRoute element={<ReportsPage />} />} />
                 <Route path="/backup" element={<PrivateRoute element={<BackupPage />} />} />
                 <Route path="/restore" element={<PrivateRoute element={<RestorePage />} />} />
+
             </Routes>
         </Router>
     );

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User
-
+from .models import Client
+from django.contrib.auth.hashers import make_password
 
 class UserSerializer(serializers.ModelSerializer):
     # Computed field
@@ -12,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'password',
-            'usertype',
+            'position',
             'firstname',
             'lastname',
             'middlename',
@@ -31,8 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
+        validated_data['is_staff'] = True
         user = User(**validated_data)
-        user.set_password(password)
+        user.password = make_password(password)
         user.save()
         return user
 
@@ -45,3 +47,18 @@ class UserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
+class ClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Client
+        fields = '__all__'  
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+     
+        password = validated_data.pop('password')
+        client = Client(**validated_data)
+        client.password = make_password(password)  
+        client.save()
+        return client

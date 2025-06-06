@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from decouple import config
+import base64
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,8 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-qno7_f9#t0#(zxasmz!8q7@l73^1ma)fd^j@1%e3l*vq^slhl2'
+# SECRET_KEY = 'django-insecure-qno7_f9#t0#(zxasmz!8q7@l73^1ma)fd^j@1%e3l*vq^slhl2'
+SECRET_KEY = config('SECRET_KEY')
 
+JWE_SECRET_KEY = base64.urlsafe_b64decode(config('JWE_SECRET_KEY'))
+assert len(JWE_SECRET_KEY) == 32
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -58,6 +63,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'AppointmentManagementSystem.urls'
 AUTH_USER_MODEL = 'api.User' #CUSTOM USER MODEL
 SIMPLE_JWT = {
+    
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_COOKIE': 'access_token',
@@ -107,7 +113,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'AppointmentManagementSystem',
         'USER': 'root',
-        'PASSWORD': '',
+        'PASSWORD': 'root123',
         'HOST': 'localhost',  
         'PORT': '3306',
     }

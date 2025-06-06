@@ -3,6 +3,8 @@ from datetime import date
 from auditlog.registry import auditlog
 from auditlog.models import AuditlogHistoryField
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin,Group,Permission
+from django.utils.timezone import now
+
 
 # Create your models here.
 # Custom user manager to handle user creation and superuser creation
@@ -17,7 +19,7 @@ class CustomUserManager(BaseUserManager):
 
 
     def create_superuser(self, username, password=None, **extra_fields):
-        extra_fields.setdefault('usertype', 'HeadOfOffice')
+        extra_fields.setdefault('position', 'HeadOfOffice')
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(username, password, **extra_fields)
@@ -88,7 +90,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['usertype', 'firstname', 'lastname', 'email']
+    REQUIRED_FIELDS = ['position', 'firstname', 'lastname', 'email']
 
 
     def __str__(self):
@@ -108,3 +110,43 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'tblUser'
 
+class Client(models.Model):
+    CIVIL_STATUS_CHOICES = [
+       ('Single', 'Single'),
+        ('Married', 'Married'),
+        ('Widowed', 'Widowed'),
+        ('Divorced', 'Divorced'),
+        ('Separated', 'Separated'),
+    ]
+
+    SEX_CHOICES = [
+        ('Male', 'Male'),
+        ('Female', 'Female'),
+        ('Other', 'Other'),
+    ]
+
+    clientID = models.AutoField(primary_key=True)  
+    username = models.CharField(max_length=100, unique=True)
+    password = models.CharField(max_length=128)  
+    lastname = models.CharField(max_length=150)
+    firstname = models.CharField(max_length=150)
+    middlename = models.CharField(max_length=150, blank=True, null=True)
+    email = models.EmailField(unique=True)
+    contact_number = models.CharField(max_length=15)
+    address = models.CharField(max_length=255)
+    civil_status = models.CharField(max_length=10, choices=CIVIL_STATUS_CHOICES)
+    birthplace = models.CharField(max_length=150)
+    birthday = models.DateField()
+    sex = models.CharField(max_length=10, choices=SEX_CHOICES)
+
+    @property
+    def id(self):
+        return self.clientID
+    
+    @property
+    def age(self):
+        today = date.today()
+        return today.year - self.birthday.year - ((today.month, today.day) < (self.birthday.month, self.birthday.day))
+
+    def __str__(self):
+        return f"{self.firstname} {self.lastname}"
