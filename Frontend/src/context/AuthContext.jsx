@@ -73,10 +73,14 @@ export default function AuthProvider({ children }) {
       const encryptedData = loginRes.data.encrypted_data
       console.log('Encrypted Data:', encryptedData)
       const decryptedRes = await axios.post('decrypt/', { data: encryptedData }, { withCredentials: true });
-      
+
       //console.log('Decrypted Data:', decryptedRes.data);
-      const userRes = await axios.get('protected/', { withCredentials: true })
-      console.log("user data:: ",userRes);
+      const userRes = await axios.post('protected/', {
+        isStaff: decryptedRes.data.isStaff,
+        username: decryptedRes.data.user
+      }, { withCredentials: true });
+
+      console.log("user data:: ", userRes);
       setUser({
         username: userRes.data.user,
         usertype: userRes.data.usertype,

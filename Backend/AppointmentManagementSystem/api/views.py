@@ -144,6 +144,7 @@ def unified_login(request):
                 "message": "Login successful (Client)",
                 "user": client.username,
                 "access_token": access_token,
+                "isStaff" : False
             }
 
             encrypted = encrypt_data(payload)
@@ -163,6 +164,7 @@ def unified_login(request):
             "message": "Login successful (User)",
             "user": user.username,
             "access_token": access_token,
+            "isStaff" : True
         }
 
         encrypted = encrypt_data(payload)
@@ -377,19 +379,22 @@ def refresh_token_view(request):
 
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def protected_view(request):
-    user = request.user
-   
-    if hasattr(user, 'clientID'):  
+    isStaff = request.data.get('isStaff')
+    username = request.data.get('username')
+
+    if not isStaff:  
+        client = Client.objects.get(username=username)
         return Response({
             "authenticated": True,
-            "user": user.username,
+            "user": client.username,
             "usertype": "Client",
-            "client_id": getattr(user, "clientID", None),
+            "client_id": client.clientID,
         })
     else:
+        user = request.user
         return Response({
             "authenticated": True,
             "user": user.username,
