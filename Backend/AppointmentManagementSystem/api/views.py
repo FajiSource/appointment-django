@@ -380,9 +380,18 @@ def refresh_token_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def protected_view(request):
-    return Response({
-        "authenticated": True,
-        "user": request.user.username,
-        'usertype': request.user.position
-    })
-    
+    user = request.user
+   
+    if hasattr(user, 'clientID'):  
+        return Response({
+            "authenticated": True,
+            "user": user.username,
+            "usertype": "Client",
+            "client_id": getattr(user, "clientID", None),
+        })
+    else:
+        return Response({
+            "authenticated": True,
+            "user": user.username,
+            "usertype": getattr(user, "position", "User"),
+        })
