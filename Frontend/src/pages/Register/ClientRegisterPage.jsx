@@ -22,11 +22,7 @@ export default function ClientRegisterPage() {
   const { error, register_client } = useAuth();
 
   const navigate = useNavigate()
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard')
-    }
-  }, [user, navigate])
+  
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
