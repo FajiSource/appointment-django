@@ -10,116 +10,118 @@ import LoansPage from "../pages/LoansPage";
 import ReportsPage from "../pages/ReportsPage";
 import BackupPage from "../pages/BackupPage";
 import RestorePage from "../pages/RestorePage";
+import { useAuth } from "../context/AuthContext";
 
 
 const getUser = () => {
-  return {
-    isAuthenticated: !!localStorage.getItem("authToken"),
-  };
+    const { user } = useAuth();
+    return {
+        isAuthenticated: user?.authenticated,
+    };
 };
 
 const AuthRedirect = () => {
-  const user = getUser();
-  return user.isAuthenticated ? (
-    <Navigate to="/dashboard" replace />
-  ) : (
-    <Navigate to="/login" replace />
-  );
+    const user = getUser();
+    return user.isAuthenticated ? (
+        <Navigate to="/dashboard" replace />
+    ) : (
+        <Navigate to="/login" replace />
+    );
 };
 
 const PublicRoute = ({ element }) => {
-  const user = getUser();
-  return user.isAuthenticated ? <Navigate to="/dashboard" replace /> : element;
+    const user = getUser();
+    return user.isAuthenticated ? <Navigate to="/dashboard" replace /> : element;
 };
 
 const ProtectedRoute = () => {
-  const user = getUser();
-  return user.isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+    const user = getUser();
+    return user.isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <AuthRedirect />,
-  },
-  {
-    path: "/login",
-    element: <PublicRoute element={<LoginPage />} />,
-  },
-  {
-    path: "/register",
-    element: <PublicRoute element={<ClientRegisterPage />} />,
-  },
-  {
-    path: "/dashboard",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <DashboardPage />,
-      },
-    ],
-  },
-  {
-    path: "/user",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <UserPage />,
-      },
-    ],
-  },
-  {
-    path: "/member",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <MemberPage />,
-      },
-    ],
-  },
-  {
-    path: "/loans",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <LoansPage />,
-      },
-    ],
-  },
-  {
-    path: "/reportgen",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <ReportsPage />,
-      },
-    ],
-  },
-  {
-    path: "/backup",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <BackupPage />,
-      },
-    ],
-  },
-  {
-    path: "/restore",
-    element: <ProtectedRoute />,
-    children: [
-      {
-        index: true,
-        element: <RestorePage />,
-      },
-    ],
-  },
+    {
+        path: "/",
+        element: <AuthRedirect />,
+    },
+    {
+        path: "/login",
+        element: <PublicRoute element={<LoginPage />} />,
+    },
+    {
+        path: "/register",
+        element: <PublicRoute element={<ClientRegisterPage />} />,
+    },
+    {
+        path: "/dashboard",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <DashboardPage />,
+            },
+        ],
+    },
+    {
+        path: "/user",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <UserPage />,
+            },
+        ],
+    },
+    {
+        path: "/member",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <MemberPage />,
+            },
+        ],
+    },
+    {
+        path: "/loans",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <LoansPage />,
+            },
+        ],
+    },
+    {
+        path: "/reportgen",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <ReportsPage />,
+            },
+        ],
+    },
+    {
+        path: "/backup",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <BackupPage />,
+            },
+        ],
+    },
+    {
+        path: "/restore",
+        element: <ProtectedRoute />,
+        children: [
+            {
+                index: true,
+                element: <RestorePage />,
+            },
+        ],
+    },
 ]);
 
 export default router;

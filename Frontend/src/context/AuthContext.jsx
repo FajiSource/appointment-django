@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext()
 
@@ -12,23 +12,24 @@ export default function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // Check if session or token is available in cookies/localStorage
+
   const checkSessionCookie = () => {
     // return sessionStorage.getItem('authToken');
     const match = document.cookie.match(/access_token=[^;]+/)
-    return localStorage.getItem('authToken') !== null
+    console.log("token from cookie: ", match);
+    return match || localStorage.getItem('authToken') !== null
   }
-  // Fetch  user’s data if a valid session/token exists
+
   const fetchUserIfAuthenticated = async () => {
     if (checkSessionCookie()) {
       try {
-        console.log("has token",checkSessionCookie())
-        
+        console.log("has token", checkSessionCookie())
+
         const res = await axios.get('/protected/', { withCredentials: true })
         setUser({
           username: res.data.user,
-          position: res.data.position,
-          authenticated: userRes.data.authenticated
+          position: res.data.usertype,
+          authenticated: res.data.authenticated
         })
         setError(null)
       } catch {
@@ -116,20 +117,66 @@ export default function AuthProvider({ children }) {
 
   }
 
-  //Calls logout endpoint and removes token from local storage
   const logOut = async () => {
-    setLoading(true)
+    setLoading(true);
+
     try {
-      
-      await axios.post('/logout/', {}, { withCredentials: true })
-      localStorage.removeItem('authToken')
-      setUser(null)
-    } catch {
-      setUser(null)
+
+      await axios.post('/logout/', {}, { withCredentials: true });
+      // const navigate = useNavigate();
+
+      localStorage.removeItem('authToken');
+
+
+      setUser(null);
+
+
+      document.cookie = 'access_token=; Max-Age=0; path=/;';
+
+
+      return <Navigate to={"/login"}/>
+    } catch (error) {
+      console.error("Logout failed:", error);
+      setUser(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      response => response,
+      async error => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+
+            const res = await axios.post('/refresh/', {}, { withCredentials: true });
+
+
+            localStorage.setItem('authToken', res.data.access);
+
+
+            return axios(originalRequest);
+          } catch (refreshError) {
+
+            setUser(null);
+            localStorage.removeItem('authToken');
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
