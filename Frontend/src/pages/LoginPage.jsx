@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { Link, useNavigate } from "react-router"
+import { useEffect, useState } from "react"
+import { Link, Navigate, useNavigate } from "react-router-dom"
+
 import { useAuth } from "../context/AuthContext"
 
 export default function LoginPage() {
@@ -8,11 +9,22 @@ export default function LoginPage() {
     // State to track hover effect on login button
     const [isHovered, setIsHovered] = useState(false)
     // Custom hook providing login function and error state
-    const { logIn, error } = useAuth()
+    const { logIn, error, user } = useAuth()
+
+
+
     // Hook to navigate programmatically after successful login
     const navigate = useNavigate()
 
-    // Update credentials state on input change
+    // useEffect(() => {
+    //     const tokenAUTH = localStorage.getItem('authToken');
+    //     if (tokenAUTH) {
+
+    //         return <Navigate to={"/dashboard"}/>
+    //     }
+    // }, [user]);
+
+
     const handleChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value })
     }

@@ -11,14 +11,16 @@ import RestorePage from './pages/RestorePage';
 import ClientRegisterPage from './pages/Register/ClientRegisterPage';
 const PrivateRoute = ({ element }) => {
     const { user, loading } = useAuth();
-    if (loading) return null;
-    return user ? element : <Navigate to="/" />;
-}
+    if (loading) return <div>Loading...</div>;
+    return user?.authenticated ? element : <Navigate to="/dashboard" />;
+};
+
 const PublicRoute = ({ element }) => {
     const { user, loading } = useAuth();
-    if (loading) return null;
-    return user ? <Navigate to="/dashboard" /> : element;
-}
+    if (loading) return <div>Loading...</div>;
+    return user?.authenticated ? <Navigate to="/dashboard" /> : element;
+};
+
 
 function App() {
     return (
@@ -27,7 +29,7 @@ function App() {
                 <Route path="/" element={<PublicRoute element={<LoginPage />} />} />
                 <Route path="/register" element={<PublicRoute element={<ClientRegisterPage />} />} />
 
-                
+
                 {/* Private routes */}
                 <Route path="/dashboard" element={<PrivateRoute element={<DashboardPage />} />} />
                 <Route path="/user" element={<PrivateRoute element={<UserPage />} />} />

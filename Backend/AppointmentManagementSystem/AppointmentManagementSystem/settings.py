@@ -64,7 +64,7 @@ ROOT_URLCONF = 'AppointmentManagementSystem.urls'
 AUTH_USER_MODEL = 'api.User' #CUSTOM USER MODEL
 SIMPLE_JWT = {
     
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_COOKIE': 'access_token',
     'AUTH_COOKIE_HTTP_ONLY': True,

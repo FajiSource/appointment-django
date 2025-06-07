@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function ClientRegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,13 +13,20 @@ export default function ClientRegisterPage() {
     email: '',
     mobile_number: '',
     address: '',
-    position:'Client',
+    position: 'Client',
     civil_status: 'Single',
     birthplace: '',
     birthday: '',
     sex: 'Male',
   })
   const { error, register_client } = useAuth();
+
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard')
+    }
+  }, [user, navigate])
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }

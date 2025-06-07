@@ -244,7 +244,7 @@ def refresh_token_view(request):
 
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def protected_view(request):
     user = request.user

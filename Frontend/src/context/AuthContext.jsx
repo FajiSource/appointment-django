@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
 
 const AuthContext = createContext()
 
@@ -13,17 +14,21 @@ export default function AuthProvider({ children }) {
 
   // Check if session or token is available in cookies/localStorage
   const checkSessionCookie = () => {
+    // return sessionStorage.getItem('authToken');
     const match = document.cookie.match(/access_token=[^;]+/)
-    return !!match || localStorage.getItem('authToken') !== null
+    return localStorage.getItem('authToken') !== null
   }
   // Fetch  user’s data if a valid session/token exists
   const fetchUserIfAuthenticated = async () => {
     if (checkSessionCookie()) {
       try {
+        console.log("has token",checkSessionCookie())
+        
         const res = await axios.get('/protected/', { withCredentials: true })
         setUser({
           username: res.data.user,
-          position: res.data.position
+          position: res.data.position,
+          authenticated: userRes.data.authenticated
         })
         setError(null)
       } catch {
@@ -73,13 +78,14 @@ export default function AuthProvider({ children }) {
       const encryptedData = loginRes.data.encrypted_data
       console.log('Encrypted Data:', encryptedData)
       const decryptedRes = await axios.post('decrypt/', { data: encryptedData }, { withCredentials: true });
-
+      localStorage.setItem('authToken', decryptedRes.data.access_token);
       //console.log('Decrypted Data:', decryptedRes.data);
-      const userRes = await axios.post('protected/', { withCredentials: true });
+      const userRes = await axios.get('protected/', { withCredentials: true });
       console.log("user data:: ", userRes);
       setUser({
         username: userRes.data.user,
         usertype: userRes.data.usertype,
+        authenticated: userRes.data.authenticated
       })
 
       setLoading(false)
@@ -101,44 +107,44 @@ export default function AuthProvider({ children }) {
       console.log('Registration successful:', res.data)
       setLoading(false)
       return true
-    }catch (err) {
-        console.error('Registration error:', err.response?.data);
-        setError(err.response?.data?.message || 'Registration failed');
-        setLoading(false);
-        return false;
-      }
-
+    } catch (err) {
+      console.error('Registration error:', err.response?.data);
+      setError(err.response?.data?.message || 'Registration failed');
+      setLoading(false);
+      return false;
     }
+
+  }
 
   //Calls logout endpoint and removes token from local storage
   const logOut = async () => {
-      setLoading(true)
-      try {
-        await axios.post('/logout/', {}, { withCredentials: true })
-        localStorage.removeItem('authToken')
-        setUser(null)
-      } catch {
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
+    setLoading(true)
+    try {
+      
+      await axios.post('/logout/', {}, { withCredentials: true })
+      localStorage.removeItem('authToken')
+      setUser(null)
+    } catch {
+      setUser(null)
+    } finally {
+      setLoading(false)
     }
-
-    return (
-      <AuthContext.Provider
-        value={{
-          user,
-          error,
-          loading,
-          logIn,
-          logOut,
-          register_client,
-          isAuthenticated: !!user
-        }}
-      >
-        {children}
-      </AuthContext.Provider>
-    )
   }
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        error,
+        loading,
+        logIn,
+        logOut,
+        register_client,
+        isAuthenticated: !!user
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
+}
 
-  export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => useContext(AuthContext)
