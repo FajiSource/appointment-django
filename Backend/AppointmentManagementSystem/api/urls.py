@@ -4,10 +4,8 @@ from .views import (
     create_user,
     user_list,
     update_user,
-    # login_user,
     logout_view,
     refresh_token_view,
-    protected_view,
     update_user_password,
 
     # client
@@ -19,8 +17,11 @@ from .views import (
 
 
     # client & user
-    unified_login,
-    decrypt_view
+    # unified_login,
+    decrypt_view,
+    login_user,
+    protected_view,
+
 )
 
 urlpatterns = [
@@ -28,21 +29,19 @@ urlpatterns = [
     path('users/', user_list),            
     path('users/create/', create_user),       
     path('users/<int:pk>/update/', update_user),  
-    # path('login/', login_user),
-    path('logout/', logout_view),
     path('refresh/', refresh_token_view),
-    path('protected/', protected_view),
     path('users/change-password/<int:pk>', update_user_password),
 
     # client
-     path('clients/create/', create_client),
-     path('clients/', client_list),
-     path('clients/<int:pk>/update/', update_client),
-    #  path('clients/login', login_client),
-     path('clients/change-password/<int:pk>', update_client_password),
+     path('users/create-client/', create_client),
+     path('users/clients', client_list),
+     path('users/<int:pk>/client-update/', update_client),
+     path('users/client-change-password/<int:pk>', update_client_password),
 
 
     #  client & user
-     path('login/', unified_login),
+     path('login/', login_user),
      path('decrypt/', decrypt_view),
+     path('protected/', protected_view),
+     path('logout/', logout_view),
 ]

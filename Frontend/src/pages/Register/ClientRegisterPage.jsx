@@ -11,8 +11,9 @@ export default function ClientRegisterPage() {
     firstname: '',
     middlename: '',
     email: '',
-    contact_number: '',
+    mobile_number: '',
     address: '',
+    position:'Client',
     civil_status: 'Single',
     birthplace: '',
     birthday: '',
@@ -35,7 +36,7 @@ export default function ClientRegisterPage() {
         firstname: '',
         middlename: '',
         email: '',
-        contact_number: '',
+        mobile_number: '',
         address: '',
         civil_status: 'Single',
         birthplace: '',
@@ -56,7 +57,7 @@ export default function ClientRegisterPage() {
         <input name="firstname" className='border' placeholder="First Name" onChange={handleChange} /><br />
         <input name="middlename" className='border' placeholder="Middle Name" onChange={handleChange} /><br />
         <input name="email" className='border' placeholder="Email" onChange={handleChange} /><br />
-        <input name="contact_number" className='border' placeholder="Contact Number" onChange={handleChange} /><br />
+        <input name="mobile_number" className='border' placeholder="Contact Number" onChange={handleChange} /><br />
         <input name="address" className='border' placeholder="Address" onChange={handleChange} /><br />
         <input name="birthplace" className='border' placeholder="Birthplace" onChange={handleChange} /><br />
         <input name="birthday" className='border' type="date" onChange={handleChange} /><br />

@@ -1,8 +1,7 @@
 from django.shortcuts import render
 from .models import User
 from utils.jwe_utils import encrypt_data,decrypt_data
-from .serializers import UserSerializer
-from .models import Client
+from .serializers import UserSerializer,UserClientSerializer
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
@@ -13,15 +12,14 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import authenticate 
-from .serializers import ClientSerializer
 from django.contrib.auth.hashers import check_password,make_password
-from django.contrib.auth import get_user_model
 
-from .permission import IsSuperUser,IsStaff
+from .permission import IsSuperUser,IsStaff,IsClient
 # Create your views here.
 
+##############################  create
 
-# user
+#  user
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def create_user(request):
@@ -33,15 +31,20 @@ def create_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
-@permission_classes([IsSuperUser])
-def user_list(request):
-    if request.method == 'GET':
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data)
+#  client
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_client(request):
+    serializer = UserClientSerializer(data=request.data)
+    if serializer.is_valid():
+        with set_actor(request.user):
+            serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+##############################  update
 
+# user
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsSuperUser,IsStaff])
 def update_user(request, pk):
@@ -53,6 +56,40 @@ def update_user(request, pk):
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# client
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsClient])
+def update_client(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    serializer = UserClientSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        with set_actor(request.user):
+            serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+##############################  list
+
+
+@api_view(['GET'])
+@permission_classes([IsSuperUser])
+def user_list(request):
+    if request.method == 'GET':
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsSuperUser])
+def client_list(request):
+    if request.method == 'GET':
+        users = User.objects.filter(position="Client")
+        serializer = UserClientSerializer(users, many=True)
+        return Response(serializer.data)
+
+##############################  update password
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsSuperUser,IsStaff])
@@ -72,136 +109,24 @@ def update_user_password(request, pk):
     return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 
-
-# client 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def create_client(request):
-    serializer = ClientSerializer(data=request.data)
-    if serializer.is_valid():
-        with set_actor(request.user):
-            serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([IsSuperUser])
-def client_list(request):
-    clients = Client.objects.all()
-    serializer = ClientSerializer(clients, many=True)
-    return Response(serializer.data)
-
-
 @api_view(['PUT', 'PATCH'])
-def update_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
-    serializer = ClientSerializer(client, data=request.data, partial=True)
-    if serializer.is_valid():
-        with set_actor(request.user):
-            serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-from django.contrib.auth.hashers import check_password
-
-
-@api_view(['PUT', 'PATCH'])
+@permission_classes([IsClient])
 def update_client_password(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    user = get_object_or_404(User, pk=pk)
     password = request.data.get('password')
     old_password = request.data.get('old_password')
 
     if not password or not old_password:
         return Response({"error": "Both old and new passwords are required"}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not check_password(old_password, client.password):
+    if not check_password(old_password, user.password):
         return Response({"error": "Old password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
 
-    client.password = make_password(password)
-    client.save()
+    user.password = make_password(password)
+    user.save()
     return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
-
 #---LOGIN/AUTH/JWT--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-# user & client auth
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def unified_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-   
-    try:
-        client = Client.objects.get(username=username)
-        if check_password(password, client.password):
-            refresh = RefreshToken.for_user(client)
-            refresh['client_id'] = client.clientID
-            refresh['username'] = client.username
-            access_token = str(refresh.access_token)
-
-            payload = {
-                "message": "Login successful (Client)",
-                "user": client.username,
-                "access_token": access_token,
-                "isStaff" : False
-            }
-
-            encrypted = encrypt_data(payload)
-            response = Response({"encrypted_data": encrypted}, status=status.HTTP_200_OK)
-            set_auth_cookies(response, access_token, str(refresh))
-            return response
-    except Client.DoesNotExist:
-        pass 
-    
-    user = authenticate(request, username=username, password=password)
-    if user is not None:
-        set_actor(user)
-        refresh = RefreshToken.for_user(user)
-        access_token = str(refresh.access_token)
-
-        payload = {
-            "message": "Login successful (User)",
-            "user": user.username,
-            "access_token": access_token,
-            "isStaff" : True
-        }
-
-        encrypted = encrypt_data(payload)
-        response = Response({"encrypted_data": encrypted}, status=status.HTTP_200_OK)
-        set_auth_cookies(response, access_token, str(refresh))
-        return response
-
-    return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-
-
-def set_auth_cookies(response, access_token, refresh_token):
-    cookie_name = settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
-    cookie_secure = settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False)
-    cookie_httponly = settings.SIMPLE_JWT.get("AUTH_COOKIE_HTTP_ONLY", True)
-    cookie_samesite = settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax")
-    access_token_lifetime = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
-    refresh_token_lifetime = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
-
-    response.set_cookie(
-        key=cookie_name,
-        value=access_token,
-        httponly=cookie_httponly,
-        secure=cookie_secure,
-        samesite=cookie_samesite,
-        max_age=access_token_lifetime,
-        path='/'
-    )
-
-    response.set_cookie(
-        key='refresh_token',
-        value=refresh_token,
-        httponly=cookie_httponly,
-        secure=cookie_secure,
-        samesite=cookie_samesite,
-        max_age=refresh_token_lifetime,
-        path='/'
-    )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -213,123 +138,63 @@ def decrypt_view(request):
     except Exception as e:
         return Response({"error": str(e)}, status=400)
 
-# # user login and authentication
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def login_user(request):
-#     username = request.data.get('username')
-#     password = request.data.get('password')
-
-#     user = authenticate(request, username=username, password=password)
-
-#     if user is not None:
-#         set_actor(user)
-#         refresh = RefreshToken.for_user(user)
-#         access_token = str(refresh.access_token)
-
-#         payload = {
-#             "message": "Login successful",
-#             "user": user.username,
-#             "access_token": access_token,
-#         }
-
-#         encrypted = encrypt_data(payload)  
-
-#         response = Response({"encrypted_data": encrypted}, status=status.HTTP_200_OK)
-
-#         cookie_name = settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
-#         cookie_secure = settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False)
-#         cookie_httponly = settings.SIMPLE_JWT.get("AUTH_COOKIE_HTTP_ONLY", True)
-#         cookie_samesite = settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax")
-#         access_token_lifetime = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
-#         refresh_token_lifetime = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
-
-#         response.set_cookie(
-#             key=cookie_name,
-#             value=access_token,
-#             httponly=cookie_httponly,
-#             secure=cookie_secure,
-#             samesite=cookie_samesite,
-#             max_age=access_token_lifetime,
-#             path='/'
-#         )
-
-#         response.set_cookie(
-#             key='refresh_token',
-#             value=str(refresh),
-#             httponly=cookie_httponly,
-#             secure=cookie_secure,
-#             samesite=cookie_samesite,
-#             max_age=refresh_token_lifetime,
-#             path='/'
-#         )
-
-#         return response
-
-#     else:
-#         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-# # client login and authentication
-# @api_view(['POST'])
-# @permission_classes([AllowAny])
-# def login_client(request):
-#     username = request.data.get('username')
-#     password = request.data.get('password')
+# user login and authentication
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_user(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
 
-#     try:
-#         client = Client.objects.get(username=username)
-#     except Client.DoesNotExist:
-#         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    user = authenticate(request, username=username, password=password)
 
-#     if not check_password(password, client.password):
-#         return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+    if user is not None:
+        set_actor(user)
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
 
-#     refresh = RefreshToken.for_user(client) 
-#     refresh['client_id'] = client.clientID
-#     refresh['username'] = client.username
+        payload = {
+            "message": "Login successful",
+            "user": user.username,
+            "access_token": access_token,
+        }
 
-#     access_token = str(refresh.access_token)
+        encrypted = encrypt_data(payload)  
 
-#     payload = {
-#         "message": "Login successful",
-#         "user": client.username,
-#         "access_token": access_token,
-#     }
+        response = Response({"encrypted_data": encrypted}, status=status.HTTP_200_OK)
 
-#     encrypted = encrypt_data(payload)
+        cookie_name = settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
+        cookie_secure = settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False)
+        cookie_httponly = settings.SIMPLE_JWT.get("AUTH_COOKIE_HTTP_ONLY", True)
+        cookie_samesite = settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax")
+        access_token_lifetime = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
+        refresh_token_lifetime = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
-#     response = Response({"encrypted_data": encrypted}, status=status.HTTP_200_OK)
+        response.set_cookie(
+            key=cookie_name,
+            value=access_token,
+            httponly=cookie_httponly,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
+            max_age=access_token_lifetime,
+            path='/'
+        )
 
-#     cookie_name = settings.SIMPLE_JWT.get("AUTH_COOKIE", "access_token")
-#     cookie_secure = settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False)
-#     cookie_httponly = settings.SIMPLE_JWT.get("AUTH_COOKIE_HTTP_ONLY", True)
-#     cookie_samesite = settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax")
-#     access_token_lifetime = int(settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds())
-#     refresh_token_lifetime = int(settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
+        response.set_cookie(
+            key='refresh_token',
+            value=str(refresh),
+            httponly=cookie_httponly,
+            secure=cookie_secure,
+            samesite=cookie_samesite,
+            max_age=refresh_token_lifetime,
+            path='/'
+        )
 
-#     response.set_cookie(
-#         key=cookie_name,
-#         value=access_token,
-#         httponly=cookie_httponly,
-#         secure=cookie_secure,
-#         samesite=cookie_samesite,
-#         max_age=access_token_lifetime,
-#         path='/'
-#     )
+        return response
 
-#     response.set_cookie(
-#         key='refresh_token',
-#         value=str(refresh),
-#         httponly=cookie_httponly,
-#         secure=cookie_secure,
-#         samesite=cookie_samesite,
-#         max_age=refresh_token_lifetime,
-#         path='/'
-#     )
-
-#     return response
-
+    else:
+        return Response({"message": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 # ****************************************************************************************************************************************************
 
 @api_view(['POST'])
@@ -382,21 +247,9 @@ def refresh_token_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def protected_view(request):
-    isStaff = request.data.get('isStaff')
-    username = request.data.get('username')
-
-    if not isStaff:  
-        client = Client.objects.get(username=username)
-        return Response({
-            "authenticated": True,
-            "user": client.username,
-            "usertype": "Client",
-            "client_id": client.clientID,
-        })
-    else:
-        user = request.user
-        return Response({
-            "authenticated": True,
-            "user": user.username,
-            "usertype": getattr(user, "position", "User"),
-        })
+    user = request.user
+    return Response({
+        "authenticated": True,
+        "user": user.username,
+        "usertype":user.position,
+    })

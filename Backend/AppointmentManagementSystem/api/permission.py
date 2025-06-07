@@ -6,4 +6,8 @@ class IsSuperUser(BasePermission):
 
 class IsStaff(BasePermission):
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.is_staff
+        return request.user and request.user.is_authenticated and request.user.is_staff 
+    
+class IsClient(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and not request.user.is_staff and not request.user.is_superuser

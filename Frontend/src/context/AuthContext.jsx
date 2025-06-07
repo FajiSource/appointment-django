@@ -75,11 +75,7 @@ export default function AuthProvider({ children }) {
       const decryptedRes = await axios.post('decrypt/', { data: encryptedData }, { withCredentials: true });
 
       //console.log('Decrypted Data:', decryptedRes.data);
-      const userRes = await axios.post('protected/', {
-        isStaff: decryptedRes.data.isStaff,
-        username: decryptedRes.data.user
-      }, { withCredentials: true });
-
+      const userRes = await axios.post('protected/', { withCredentials: true });
       console.log("user data:: ", userRes);
       setUser({
         username: userRes.data.user,
@@ -101,46 +97,48 @@ export default function AuthProvider({ children }) {
     setError(null)
 
     try {
-      const res = await axios.post('/clients/create/', credentials, { withCredentials: true })
+      const res = await axios.post('/users/create-client/', credentials, { withCredentials: true })
       console.log('Registration successful:', res.data)
       setLoading(false)
       return true
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed')
-      setLoading(false)
-      return false
+    }catch (err) {
+        console.error('Registration error:', err.response?.data);
+        setError(err.response?.data?.message || 'Registration failed');
+        setLoading(false);
+        return false;
+      }
+
     }
-  }
 
   //Calls logout endpoint and removes token from local storage
   const logOut = async () => {
-    setLoading(true)
-    try {
-      await axios.post('/logout/', {}, { withCredentials: true })
-      localStorage.removeItem('authToken')
-      setUser(null)
-    } catch {
-      setUser(null)
-    } finally {
-      setLoading(false)
+      setLoading(true)
+      try {
+        await axios.post('/logout/', {}, { withCredentials: true })
+        localStorage.removeItem('authToken')
+        setUser(null)
+      } catch {
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
+
+    return (
+      <AuthContext.Provider
+        value={{
+          user,
+          error,
+          loading,
+          logIn,
+          logOut,
+          register_client,
+          isAuthenticated: !!user
+        }}
+      >
+        {children}
+      </AuthContext.Provider>
+    )
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        error,
-        loading,
-        logIn,
-        logOut,
-        register_client,
-        isAuthenticated: !!user
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-export const useAuth = () => useContext(AuthContext)
+  export const useAuth = () => useContext(AuthContext)
