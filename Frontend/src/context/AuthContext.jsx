@@ -28,7 +28,7 @@ export default function AuthProvider({ children }) {
         const res = await axios.get('/protected/', { withCredentials: true })
         setUser({
           username: res.data.user,
-          position: res.data.usertype,
+          usertype: res.data.usertype,
           authenticated: res.data.authenticated
         })
         setError(null)
